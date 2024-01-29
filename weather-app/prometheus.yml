@@ -1,0 +1,31 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  - job_name: 'database-service'
+    static_configs:
+      - targets: ['database-service:5000']
+
+  #- job_name: 'notifier-service'
+  #  static_configs:
+   #   - targets: ['notifier-service:5005']
+
+  - job_name: 'scraper-service'
+    static_configs:
+      - targets: ['scraper-service:5002']
+
+  #- job_name: 'user-management-service'
+  #  static_configs:
+   #   - targets: ['user-management-service:5001']
+
+  - job_name: 'sla-manager'
+    static_configs:
+      - targets: ['sla-manager:5003']

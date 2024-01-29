@@ -1,0 +1,127 @@
+version: '3'
+
+services:
+  database-service:
+    build:
+      context: ./database_service
+    ports:
+      - "5000:5000"
+    labels:
+      - "service_port=5000"
+    
+
+  notifier-service:
+    build:
+      context: ./notifier_service
+    ports:
+      - "5005:5005"
+    environment:
+      - SCRAPER_SERVICE_URL=http://scraper-service:5000/scrape
+    depends_on:
+      - scraper-service
+    labels:
+      - "service_port=5005"
+
+  sla-manager:
+    build:
+      context: ./sla_manager
+    ports:
+      - "5003:5003"  # Cambia la porta se necessario
+    depends_on:
+      - database-service
+      - notifier-service
+      - scraper-service
+      - user-management-service
+    labels:
+      - "service_port=5003"  
+
+  scraper-service:
+    build:
+      context: ./scraper_service
+    ports:
+      - "5002:5002"
+    labels:
+      - "service_port=5002"
+
+  user-management-service:
+    build:
+      context: ./user_management_service
+    ports:
+      - "5001:5001"
+    depends_on:
+      - database-service
+    labels: 
+      - "service_port=5001"
+    
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    
+
+  node-exporter:
+    image: prom/node-exporter
+    ports:
+      - 9100:9100
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host:ro
+      - /:/rootfs:ro
+    command:
+      - --path.procfs=/host/proc
+      - --path.rootfs=/rootfs
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)
+
+  cadvisor:
+    image: 'google/cadvisor:latest'
+    container_name: cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk:/dev/disk/:ro
+    ports:
+    - '8080:8080'
+
+  zookeeper:
+    image: wurstmeister/zookeeper:3.4.6
+    ports:
+      - "2181:2181"
+    expose:
+      - "2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: wurstmeister/kafka:2.11-1.1.1
+    ports:
+      - "9092:9092"  # Porta di default per Kafka
+      - "29092:29092"  # Porta alternativa per connessioni esterne
+    expose:
+      - "9092"
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9092,OUTSIDE://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_LISTENERS: INSIDE://0.0.0.0:9092,OUTSIDE://0.0.0.0:29092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_CREATE_TOPICS: "prometheusdata:1:1"
+      
+
+      
+
+  
+
+
+
+
+
+
+
